@@ -1,4 +1,3 @@
-import { LogOut, User, ChevronDown, Calculator } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -6,9 +5,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { User,ChevronDown, Calculator } from "lucide-react"
 import Link from "next/link"
+import { getUser } from "@/lib/auth"
+import LogoutButton from "@/components/layout/LogoutButton"
 
-export default function Navbar() {
+export default async function Navbar() {
+  const user = await getUser()
+
   return (
     <div className="flex items-center justify-between px-8 py-4 border-b border-[#2a2e43] bg-[#161b2e]">
       <DropdownMenu>
@@ -31,16 +35,9 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-[#8892b0]">
           <User size={16} />
-          <span>用戶名稱</span>
+          <span>{user?.email ?? "未登入"}</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-[#8892b0] hover:text-white hover:bg-[#2a2e43] gap-2"
-        >
-          <LogOut size={16} />
-          登出
-        </Button>
+        <LogoutButton />
       </div>
     </div>
   )
