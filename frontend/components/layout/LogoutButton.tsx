@@ -17,14 +17,12 @@ export default function LogoutButton() {
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
       onClick={handleLogout}
-      className="text-[#8892b0] hover:text-white hover:bg-[#2a2e43] gap-2"
+      className="flex items-center gap-2 text-xl text-[#8892b0] hover:text-white cursor-pointer"
     >
-      <LogOut size={16} />
-      登出
-    </Button>
+    <LogOut size={20} />
+    登出
+    </button>
   )
 }
