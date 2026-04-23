@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LayoutDashboard, Star } from "lucide-react"
+import { Home , Star, Scale, CandlestickChart } from "lucide-react"
 
 export default function Sidebar() {
   return (
@@ -12,12 +12,20 @@ export default function Sidebar() {
       </div>
       <nav className="flex flex-col gap-1">
         <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-2xl text-[#8892b0] hover:text-white hover:bg-[#2a2e43] transition-all duration-200">
-          <LayoutDashboard size={16} />
+          <Home  size={16} />
           首頁
         </Link>
         <Link href="/watchlist" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-2xl text-[#8892b0] hover:text-white hover:bg-[#2a2e43] transition-all duration-200">
           <Star size={16} />
           自選股
+        </Link>
+        <Link href="/compare" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-2xl text-[#8892b0] hover:text-white hover:bg-[#2a2e43] transition-all duration-200">
+          <Scale size={16} />
+          比較
+        </Link>
+        <Link href="/technical-analysis" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-2xl text-[#8892b0] hover:text-white hover:bg-[#2a2e43] transition-all duration-200">
+          <CandlestickChart size={16} />
+          技術分析
         </Link>
       </nav>
     </div>

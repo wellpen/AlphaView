@@ -1,66 +1,8 @@
-// "use client"
-// import { Search } from "lucide-react"
-// import { Input } from "@/components/ui/input"
-
-// const indices = [
-//   { name: "S&P 500", value: "5,234.18", change: "+1.2%", up: true },
-//   { name: "NASDAQ", value: "16,384.47", change: "+0.8%", up: true },
-//   { name: "DOW JONES", value: "39,127.14", change: "-0.3%", up: false },
-// ]
-
-// const trendingStocks = [
-//   { symbol: "AAPL", name: "Apple Inc.", price: "$182.5", change: "+1.2%", up: true },
-//   { symbol: "TSLA", name: "Tesla Inc.", price: "$245.3", change: "-0.8%", up: false },
-//   { symbol: "NVDA", name: "NVIDIA Corp.", price: "$875.2", change: "+2.3%", up: true },
-// ]
-
-// export default function DashboardPage() {
-//   return (
-//     <div className="flex flex-col gap-8">
-
-//       {/* 大盤指數 */}
-//       <div>
-//         <h2 className="text-xl font-bold text-[#8892b0] uppercase tracking-widest mb-3">大盤指數</h2>
-//         <div className="grid grid-cols-3 gap-4">
-//           {indices.map((index) => (
-//             <div key={index.name} className="bg-[#1e2130] border border-[#2a2e43] rounded-xl p-4">
-//               <p className="text-xl text-[#8892b0] mb-1">{index.name}</p>
-//               <p className="text-xl font-bold text-white">{index.value}</p>
-//               <p className={`text-xl font-medium mt-1 ${index.up ? "text-[#00C805]" : "text-red-500"}`}>
-//                 {index.change}
-//               </p>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-
-//       {/* 熱門股票 */}
-//       <div>
-//         <h2 className="text-xl font-bold text-[#8892b0] uppercase tracking-widest mb-3">熱門股票</h2>
-//         <div className="grid grid-cols-3 gap-4">
-//           {trendingStocks.map((stock) => (
-//             <div key={stock.symbol} className="bg-[#1e2130] border border-[#2a2e43] rounded-xl p-4 cursor-pointer  hover:border-[#2962ff] transition-all">
-//               <div className="flex justify-between items-start">
-//                 <div>
-//                   <p className="text-white font-bold">{stock.symbol}</p>
-//                 </div>
-//                 <p className={`text-sm font-medium ${stock.up ? "text-[#00C805]" : "text-red-500"}`}>
-//                   {stock.change}
-//                 </p>
-//               </div>
-//               <p className="text-xl font-bold text-white mt-2">{stock.price}</p>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-
-//     </div>
-//   )
-// }
-
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import socket from "@/lib/socket"
+import api from "@/lib/api"
 
 function TradingViewWidget({ symbol, height = 300 }: { symbol: string; height?: number }) {
   const container = useRef<HTMLDivElement>(null)
@@ -82,15 +24,12 @@ function TradingViewWidget({ symbol, height = 300 }: { symbol: string; height?: 
       colorTheme: "dark",
       isTransparent: true,
       autosize: false,
-      largeChartUrl: "",
     })
 
     container.current.appendChild(script)
-  }, [symbol])
+  }, [symbol,height])
 
-  return (
-    <div className="tradingview-widget-container" ref={container} style={{ height, width: "100%" }} />
-  )
+  return <div className="tradingview-widget-container" ref={container} style={{ height, width: "100%" }} />
 }
 
 const indices = [
@@ -102,7 +41,68 @@ const indices = [
   { name: "BTC/USD", symbol: "BITSTAMP:BTCUSD" },
 ]
 
+interface Stock {
+  symbol: string
+  price: number | null
+  change: number | null
+  changeAmount: number | null
+  prevClose: number | null
+}
+
+interface QuoteResult {
+  symbol: string
+  price: number
+  change: number
+  prevClose: number
+  changeAmount: number
+}
+
+const defaultStocks: Stock[] = [
+  { symbol: "NVDA", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "AAPL", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "MSFT", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "GOOGL", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "AMZN", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "TSM", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "META", price: null, change: null, changeAmount: null, prevClose: null },
+  { symbol: "TSLA", price: null, change: null, changeAmount: null, prevClose: null }
+]
+
 export default function DashboardPage() {
+  const [stocks, setStocks] = useState(defaultStocks)
+
+  useEffect(() => {
+    api.get("/market/quote").then((res) => {
+      setStocks((prev) =>
+        prev.map((s) => {
+          const found = res.data.find((q: QuoteResult) => q.symbol === s.symbol)
+          return found ? { 
+              ...s, 
+              price: found.price, 
+              change: found.change, 
+              prevClose: found.prevClose,
+              changeAmount: found.changeAmount  // 加這個
+            } : s
+        })
+      )
+    })
+  }, [])
+
+
+  useEffect(() => {  
+    socket.on("price", (data: { symbol: string; price: number }) => {
+      setStocks((prev) =>
+        prev.map((s) => {
+          if (s.symbol !== data.symbol) return s
+          const change = s.prevClose ? (data.price - s.prevClose) / s.prevClose * 100 : null        
+          const changeAmount = s.prevClose ? data.price - s.prevClose : null
+          return { ...s, price: data.price, change, changeAmount }
+        })
+      )
+    })
+    return () => { socket.off("price") }
+  }, [])
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -122,18 +122,18 @@ export default function DashboardPage() {
       {/* 熱門股票 */}
       <div>
         <h2 className="text-xl font-bold text-[#8892b0] uppercase tracking-widest mb-3">熱門股票</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { symbol: "AAPL", price: "$182.5", change: "+1.2%", up: true },
-            { symbol: "TSLA", price: "$245.3", change: "-0.8%", up: false },
-            { symbol: "NVDA", price: "$875.2", change: "+2.3%", up: true },
-          ].map((stock) => (
-            <div key={stock.symbol} className="bg-[#1e2130] border border-[#2a2e43] rounded-xl p-4 cursor-pointer hover:border-[#2962ff] transition-all">
-              <div className="flex justify-between items-start">
-                <p className="text-white font-bold">{stock.symbol}</p>
-                <p className={`text-sm font-medium ${stock.up ? "text-[#00C805]" : "text-red-500"}`}>{stock.change}</p>
-              </div>
-              <p className="text-xl font-bold text-white mt-2">{stock.price}</p>
+        <div className="grid grid-cols-8 gap-4">
+          {stocks.map((stock) => (
+            <div key={stock.symbol} className="text-xl bg-[#1e2130] border border-[#2a2e43] rounded-xl p-4 cursor-pointer hover:border-[#2962ff] transition-all">
+              <p className="text-white font-bold">{stock.symbol}</p>            
+              <p className="text-xl font-bold text-white mt-2">{stock.price ? `$${stock.price.toFixed(2)}` : "載入中..."}</p>
+              {stock.change != null && stock.changeAmount != null && (
+                <p key={`${stock.symbol}-${stock.price}`} className={`text-base font-bold mt-1 rounded inline-block px-1 
+                  ${stock.change >= 0 ? "text-green-400" : "text-red-400"} 
+                  ${stock.change >= 0 ? 'flash-up' : 'flash-down'}`}>
+                  {stock.changeAmount >= 0 ? "+" : ""}{stock.changeAmount.toFixed(2)} &nbsp; {stock.change >= 0 ? "+" : ""}{stock.change.toFixed(2)}%
+                </p>
+              )}
             </div>
           ))}
         </div>
